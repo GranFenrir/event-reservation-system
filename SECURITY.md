@@ -1,73 +1,31 @@
-# Security Policy
+# Security
 
-## 🔐 Supported Versions
+## Found a Security Issue?
 
-We actively support security updates for the following versions:
+If you find a security vulnerability, please don't create a public issue. Instead:
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
+- Email me directly, or
+- Use GitHub's private security advisory feature
 
-## 🚨 Reporting a Vulnerability
+I'll try to respond within a few days. Please include:
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+- What the issue is
+- Where you found it (which file/line)
+- How to reproduce it
+- What you think the impact might be
 
-Instead, please report them by email to: security@yourcompany.com
+## What I'm Doing for Security
 
-You should receive a response within 48 hours. If for some reason you do not,
-please follow up via email to ensure we received your original message.
+This project includes:
 
-Please include the following information:
-
-- Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting,
-  etc.)
-- Full paths of source file(s) related to the manifestation of the issue
-- The location of the affected source code (tag/branch/commit or direct URL)
-- Any special configuration required to reproduce the issue
-- Step-by-step instructions to reproduce the issue
-- Proof-of-concept or exploit code (if possible)
-- Impact of the issue, including how an attacker might exploit the issue
-
-This information will help us triage your report more quickly.
-
-## 🛡️ Security Measures Implemented
-
-### Authentication & Authorization
-
-- JWT tokens with secure signing
-- Role-based access control (RBAC)
-- API rate limiting
-- Session management
-
-### Data Protection
-
-- Input validation and sanitization
-- SQL injection prevention
-- XSS protection
+- JWT authentication
+- Basic input validation
+- SQLite database (local development)
 - CORS configuration
-- Environment variable protection
+- Environment variables for sensitive data
 
-### Infrastructure Security
+This is a learning project, so security measures are basic but functional.
 
-- HTTPS enforcement in production
-- Database connection encryption
-- Secure headers implementation
-- Regular dependency updates
+## Questions?
 
-### Monitoring & Logging
-
-- Security event logging
-- Failed authentication attempt tracking
-- Suspicious activity detection
-- Error handling that doesn't expose sensitive information
-
-## 🏆 Responsible Disclosure
-
-We are committed to working with security researchers to verify, reproduce, and
-respond to legitimate reported vulnerabilities. We will publicly acknowledge
-your responsible disclosure, if you wish.
-
-## 📧 Contact
-
-For questions about this security policy, please contact:
-security@yourcompany.com
+Just create a regular GitHub issue if you have questions about security practices in this project.
