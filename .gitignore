@@ -165,3 +165,29 @@ temp/
 */dist/
 */.next/
 */out/
+
+# Development/temporary documentation files
+PHASE_*.md
+STATUS_*.md
+*_COMPLETION.md
+*_AUDIT.md
+*_FIXES.md
+*_TRANSFORMATION*.md
+*_INTEGRATION*.md
+*_SETUP.md
+*_VERIFICATION*.md
+CONVERSION_PLAN.md
+
+# Backup directories
+*-backup/
+*-old/
+*.bak
+components-old/
+
+# Corrupted/temporary config files
+*-corrupted.*
+*-clean.*
+docker-compose-*.yml
+!docker-compose.yml
+!docker-compose.dev.yml
+!docker-compose.prod.yml

@@ -1,68 +1,26 @@
+'use client';
+
 import { Calendar, MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
-
-interface Venue {
-  name: string;
-  address: string;
-}
-
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  venue: Venue;
-  maxCapacity: number;
-  currentReservations: number;
-  images: string[];
-  ticketTypes: string[];
-}
-
-// This would be fetched from the API in a real application
-const sampleEvents = [
-  {
-    id: '1',
-    title: 'Summer Music Festival',
-    description:
-      'Join us for an amazing summer music festival featuring top artists from around the world.',
-    startDate: '2025-07-15T18:00:00Z',
-    endDate: '2025-07-15T23:00:00Z',
-    venue: { name: 'Central Park', address: 'New York, NY' },
-    maxCapacity: 5000,
-    currentReservations: 2350,
-    images: ['/placeholder-event.jpg'],
-    ticketTypes: ['VIP', 'Premium', 'Standard'],
-  },
-  {
-    id: '2',
-    title: 'Tech Conference 2025',
-    description:
-      'Learn about the latest technology trends and network with industry professionals.',
-    startDate: '2025-08-20T09:00:00Z',
-    endDate: '2025-08-20T17:00:00Z',
-    venue: { name: 'Convention Center', address: 'San Francisco, CA' },
-    maxCapacity: 1000,
-    currentReservations: 750,
-    images: ['/placeholder-event.jpg'],
-    ticketTypes: ['Premium', 'Standard'],
-  },
-  {
-    id: '3',
-    title: 'Theater Performance',
-    description:
-      'Experience a captivating theatrical performance by award-winning actors.',
-    startDate: '2025-09-10T19:30:00Z',
-    endDate: '2025-09-10T22:00:00Z',
-    venue: { name: 'Broadway Theater', address: 'New York, NY' },
-    maxCapacity: 800,
-    currentReservations: 450,
-    images: ['/placeholder-event.jpg'],
-    ticketTypes: ['VIP', 'Standard'],
-  },
-];
+import { useQuery } from '@tanstack/react-query';
+import { eventsAPI } from '@/services/api';
+import { Event } from '@/types/event';
+import { formatCurrency } from '@/utils';
 
 export default function EventsPage() {
+  const { data: apiResponse, isLoading, error } = useQuery({
+    queryKey: ['events'],
+    queryFn: async () => {
+      console.log('🔍 Fetching events from API...');
+      const response = await eventsAPI.getAll();
+      console.log('✅ API Response:', response.data);
+      return response.data;
+    },
+  });
+
+  // Extract events from the microservice response structure
+  const events: Event[] = apiResponse?.data?.events || [];
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -83,8 +41,8 @@ export default function EventsPage() {
               <select className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">All Categories</option>
                 <option value="music">Music</option>
-                <option value="tech">Technology</option>
-                <option value="theater">Theater</option>
+                <option value="conference">Conference</option>
+                <option value="comedy">Comedy</option>
                 <option value="sports">Sports</option>
               </select>
             </div>
@@ -106,7 +64,7 @@ export default function EventsPage() {
                 placeholder="Enter city"
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-            </div>{' '}
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Price Range
@@ -122,27 +80,70 @@ export default function EventsPage() {
         </div>
 
         {/* Events Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {sampleEvents.map(event => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="animate-pulse">
+                <div className="bg-gray-300 h-48 rounded-lg mb-4"></div>
+                <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center text-gray-500 py-12">
+            <p>Unable to load events. Please try again later.</p>
+          </div>
+        ) : events && events.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {events.map(event => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-gray-500 py-12">
+            <Calendar className="mx-auto h-12 w-12 mb-4" />
+            <p>No events available at the moment.</p>
+            <p className="text-sm">Check back soon for exciting events!</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function EventCard({ event }: { event: Event }) {
+  // Format the date and time from ISO string
+  const eventDate = new Date(event.startDate);
+  const eventEndDate = new Date(event.endDate);
+  
+  // Get the minimum price from ticket prices
+  const minPrice = event.ticketPrices.length > 0 
+    ? Math.min(...event.ticketPrices.map(price => parseFloat(price.price)))
+    : 0;
+
+  // Calculate available seats
+  const availableSeats = event.totalSeats - event.soldSeats;
+
   return (
     <Link href={`/events/${event.id}`} className="group">
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
-        <div className="h-48 bg-gradient-to-r from-blue-500 to-purple-600 relative">
+        <div className="h-48 relative overflow-hidden">
+          {event.imageUrl ? (
+            <img
+              src={event.imageUrl}
+              alt={event.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600"></div>
+          )}
           <div className="absolute inset-0 bg-black bg-opacity-20"></div>
           <div className="absolute bottom-4 left-4 text-white">
             <h3 className="text-xl font-bold mb-1">{event.title}</h3>
             <div className="flex items-center text-sm">
               <MapPin className="h-4 w-4 mr-1" />
-              <span>{event.venue?.name}</span>
+              <span>{event.venue?.city ? `${event.venue.city}, ${event.venue.country}` : 'Location TBA'}</span>
             </div>
           </div>
         </div>
@@ -151,11 +152,7 @@ function EventCard({ event }: { event: Event }) {
           <div className="flex items-center mb-2 text-gray-600">
             <Calendar className="h-4 w-4 mr-2" />
             <span className="text-sm">
-              {new Date(event.startDate).toLocaleDateString()} at{' '}
-              {new Date(event.startDate).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {eventDate.toLocaleDateString()} at {eventDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
             </span>
           </div>
 
@@ -164,11 +161,13 @@ function EventCard({ event }: { event: Event }) {
           </p>
 
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-green-600">From $49</span>
+            <span className="text-lg font-bold text-green-600">
+              From {formatCurrency(minPrice)}
+            </span>
             <div className="flex items-center text-sm text-gray-500">
               <Users className="h-4 w-4 mr-1" />
               <span>
-                {event.currentReservations} / {event.maxCapacity}
+                {event.soldSeats} / {event.totalSeats} sold
               </span>
             </div>
           </div>

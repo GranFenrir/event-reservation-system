@@ -2,12 +2,23 @@
 
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { useEvents } from '@/hooks/useAPI';
-import { formatCurrency } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { formatCurrency } from '@/utils';
 import { Event } from '@/types/event';
+import { eventsAPI } from '@/services/api';
 
 export default function Home() {
-  const { data: events, isLoading, error } = useEvents();
+  // Use the hook directly in the component
+  const { data: apiResponse, isLoading, error } = useQuery({
+    queryKey: ['events'],
+    queryFn: async () => {
+      const response = await eventsAPI.getAll();
+      return response.data;
+    },
+  });
+
+  // Extract events from the microservice response structure
+  const events = apiResponse?.data?.events || [];
 
   const featuredEvents: Event[] = events?.slice(0, 3) || [];
 
@@ -116,16 +127,33 @@ export default function Home() {
 }
 
 function EventCard({ event }: { event: Event }) {
+  // Format the date and time from ISO string
+  const eventDate = new Date(event.startDate);
+  
+  // Get the minimum price from ticket prices
+  const minPrice = event.ticketPrices.length > 0 
+    ? Math.min(...event.ticketPrices.map(price => parseFloat(price.price)))
+    : 0;
+
   return (
     <Link href={`/events/${event.id}`} className="group">
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
-        <div className="h-48 bg-gradient-to-r from-blue-500 to-purple-600 relative">
+        <div className="h-48 relative overflow-hidden">
+          {event.imageUrl ? (
+            <img
+              src={event.imageUrl}
+              alt={event.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-600"></div>
+          )}
           <div className="absolute inset-0 bg-black bg-opacity-20"></div>
           <div className="absolute bottom-4 left-4 text-white">
             <h3 className="text-xl font-bold mb-1">{event.title}</h3>
             <div className="flex items-center text-sm">
               <MapPin className="h-4 w-4 mr-1" />
-              <span>{event.location || 'TBA'}</span>
+              <span>{event.venue?.city ? `${event.venue.city}, ${event.venue.country}` : 'Location TBA'}</span>
             </div>
           </div>
         </div>
@@ -134,7 +162,7 @@ function EventCard({ event }: { event: Event }) {
           <div className="flex items-center mb-2 text-gray-600">
             <Calendar className="h-4 w-4 mr-2" />
             <span className="text-sm">
-              {event.date} at {event.time}
+              {eventDate.toLocaleDateString()} at {eventDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
             </span>
           </div>
 
@@ -144,11 +172,10 @@ function EventCard({ event }: { event: Event }) {
 
           <div className="flex items-center justify-between">
             <span className="text-lg font-bold text-green-600">
-              From {formatCurrency(event.price)}
+              From {formatCurrency(minPrice)}
             </span>
             <span className="text-sm text-gray-500">
-              {event.totalSeats - event.availableSeats} / {event.totalSeats}{' '}
-              reserved
+              {event.soldSeats} / {event.totalSeats} sold
             </span>
           </div>
         </div>

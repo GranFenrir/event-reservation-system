@@ -1,0 +1,65 @@
+# Multi-stage Docker build for user-service
+# Stage 1: Build stage
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared dependencies first
+COPY shared/ ./shared/
+
+# Install shared dependencies
+WORKDIR /app/shared
+RUN npm install
+
+# Copy user service files
+WORKDIR /app
+COPY microservices/user-service/package*.json ./microservices/user-service/
+COPY microservices/user-service/tsconfig*.json ./microservices/user-service/
+COPY microservices/user-service/nest-cli.json ./microservices/user-service/
+COPY microservices/user-service/src ./microservices/user-service/src/
+
+# Install user service dependencies
+WORKDIR /app/microservices/user-service
+RUN npm install
+
+# Build the user service
+RUN npm run build
+
+# Stage 2: Production stage
+FROM node:18-alpine AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S user -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared dependencies
+COPY --from=builder --chown=user:nodejs /app/shared ./shared
+
+# Copy user service production files
+COPY --from=builder --chown=user:nodejs /app/microservices/user-service/dist ./dist
+COPY --from=builder --chown=user:nodejs /app/microservices/user-service/node_modules ./node_modules
+COPY --from=builder --chown=user:nodejs /app/microservices/user-service/package*.json ./
+
+# Switch to non-root user
+USER user
+
+# Expose the port
+EXPOSE 3005
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "const http = require('http'); \
+    const options = { host: 'localhost', port: 3005, path: '/health', timeout: 2000 }; \
+    const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); \
+    req.on('error', () => process.exit(1)); req.end();"
+
+# Start the application
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "start:prod"]

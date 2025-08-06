@@ -14,12 +14,13 @@ import { Event } from './event.entity';
 export class TicketPrice {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
   @Column({
-    type: 'varchar',
-    length: 50,
-    comment: 'Ticket type: general, vip, student, early_bird, group, premium',
+    type: 'enum',
+    enum: TicketType,
+    comment: 'Ticket type from predefined enum values',
   })
-  type: string;
+  type: TicketType;
 
   @Column({ type: 'varchar', length: 255 })
   name: string;

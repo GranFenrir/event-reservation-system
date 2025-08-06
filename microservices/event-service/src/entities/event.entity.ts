@@ -26,16 +26,16 @@ export class Event {
   @Column({ type: 'varchar', length: 500, nullable: true })
   imageUrl?: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   startDate: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   endDate: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   saleStartDate: Date;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   saleEndDate: Date;
 
   @Column({ type: 'varchar', length: 100 })

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
-import { reservationsAPI } from '@/lib/api';
+import { reservationsAPI } from '@/services/api';
 import { format } from 'date-fns';
 
 interface Reservation {

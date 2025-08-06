@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -49,7 +47,7 @@ services:
       - "2181:2181"
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.4.0
     container_name: event-kafka
     depends_on:
       - zookeeper
@@ -78,6 +76,143 @@ services:
       - postgres
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+
+  # Microservices
+  event-service:
+    build:
+      context: .
+      dockerfile: ./microservices/event-service/Dockerfile
+    container_name: event-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/event_reservation
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+  reservation-service:
+    build:
+      context: .
+      dockerfile: ./microservices/reservation-service/Dockerfile
+    container_name: reservation-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/event_reservation
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: ./microservices/payment-service/Dockerfile
+    container_name: payment-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/event_reservation
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+  mail-service:
+    build:
+      context: .
+      dockerfile: ./microservices/mail-service/Dockerfile
+    container_name: mail-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+  reporting-service:
+    build:
+      context: .
+      dockerfile: ./microservices/reporting-service/Dockerfile
+    container_name: reporting-service
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/event_reservation
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: .
+      dockerfile: ./microservices/user-service/Dockerfile
+    container_name: user-service
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=production
+      - PORT=3006
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=event_reservation
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_ACCESS_SECRET=your-super-secret-jwt-access-key-production
+      - JWT_REFRESH_SECRET=your-super-secret-jwt-refresh-key-production
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   postgres_data:

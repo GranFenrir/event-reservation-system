@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Calendar, Clock, MapPin, Ticket, Download, X } from 'lucide-react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { reservationsAPI } from '@/lib/api';
+import { reservationsAPI } from '@/services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 

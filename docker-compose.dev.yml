@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Development overrides for microservices
+  event-service:
+    build:
+      target: builder
+    volumes:
+      - ./microservices/event-service/src:/app/src
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  reservation-service:
+    build:
+      target: builder
+    volumes:
+      - ./microservices/reservation-service/src:/app/src
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  payment-service:
+    build:
+      target: builder
+    volumes:
+      - ./microservices/payment-service/src:/app/src
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  mail-service:
+    build:
+      target: builder
+    volumes:
+      - ./microservices/mail-service/src:/app/src
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev
+
+  reporting-service:
+    build:
+      target: builder
+    volumes:
+      - ./microservices/reporting-service/src:/app/src
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run start:dev

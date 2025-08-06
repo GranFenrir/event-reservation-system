@@ -1,0 +1,65 @@
+# Multi-stage Docker build for reservation-service
+# Stage 1: Build stage
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared dependencies first
+COPY shared/ ./shared/
+
+# Install shared dependencies
+WORKDIR /app/shared
+RUN npm install
+
+# Copy reservation service files
+WORKDIR /app
+COPY microservices/reservation-service/package*.json ./microservices/reservation-service/
+COPY microservices/reservation-service/tsconfig*.json ./microservices/reservation-service/
+COPY microservices/reservation-service/nest-cli.json ./microservices/reservation-service/
+COPY microservices/reservation-service/src ./microservices/reservation-service/src/
+
+# Install reservation service dependencies
+WORKDIR /app/microservices/reservation-service
+RUN npm install
+
+# Build the reservation service
+RUN npm run build
+
+# Stage 2: Production stage
+FROM node:18-alpine AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S reservation -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared dependencies
+COPY --from=builder --chown=reservation:nodejs /app/shared ./shared
+
+# Copy reservation service production files
+COPY --from=builder --chown=reservation:nodejs /app/microservices/reservation-service/dist ./dist
+COPY --from=builder --chown=reservation:nodejs /app/microservices/reservation-service/node_modules ./node_modules
+COPY --from=builder --chown=reservation:nodejs /app/microservices/reservation-service/package*.json ./
+
+# Switch to non-root user
+USER reservation
+
+# Expose the port
+EXPOSE 3002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "const http = require('http'); \
+    const options = { host: 'localhost', port: 3002, path: '/health', timeout: 2000 }; \
+    const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); \
+    req.on('error', () => process.exit(1)); req.end();"
+
+# Start the application
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "start:prod"]

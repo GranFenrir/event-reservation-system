@@ -1,0 +1,65 @@
+# Multi-stage Docker build for payment-service
+# Stage 1: Build stage
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared dependencies first
+COPY shared/ ./shared/
+
+# Install shared dependencies
+WORKDIR /app/shared
+RUN npm install
+
+# Copy payment service files
+WORKDIR /app
+COPY microservices/payment-service/package*.json ./microservices/payment-service/
+COPY microservices/payment-service/tsconfig*.json ./microservices/payment-service/
+COPY microservices/payment-service/nest-cli.json ./microservices/payment-service/
+COPY microservices/payment-service/src ./microservices/payment-service/src/
+
+# Install payment service dependencies
+WORKDIR /app/microservices/payment-service
+RUN npm install
+
+# Build the payment service
+RUN npm run build
+
+# Stage 2: Production stage
+FROM node:18-alpine AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S payment -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared dependencies
+COPY --from=builder --chown=payment:nodejs /app/shared ./shared
+
+# Copy payment service production files
+COPY --from=builder --chown=payment:nodejs /app/microservices/payment-service/dist ./dist
+COPY --from=builder --chown=payment:nodejs /app/microservices/payment-service/node_modules ./node_modules
+COPY --from=builder --chown=payment:nodejs /app/microservices/payment-service/package*.json ./
+
+# Switch to non-root user
+USER payment
+
+# Expose the port
+EXPOSE 3003
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "const http = require('http'); \
+    const options = { host: 'localhost', port: 3003, path: '/health', timeout: 2000 }; \
+    const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); \
+    req.on('error', () => process.exit(1)); req.end();"
+
+# Start the application
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "start:prod"]

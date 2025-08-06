@@ -1,0 +1,85 @@
+# Multi-stage Docker build for reporting-service with Canvas support
+# Stage 1: Build stage with Canvas dependencies
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies for Canvas and native compilation
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    make \
+    g++ \
+    cairo-dev \
+    pango-dev \
+    jpeg-dev \
+    giflib-dev \
+    librsvg-dev \
+    pixman-dev
+
+# Copy shared dependencies first
+COPY shared/ ./shared/
+
+# Install shared dependencies
+WORKDIR /app/shared
+RUN npm install
+
+# Copy reporting service files
+WORKDIR /app
+COPY microservices/reporting-service/package*.json ./microservices/reporting-service/
+COPY microservices/reporting-service/tsconfig*.json ./microservices/reporting-service/
+COPY microservices/reporting-service/nest-cli.json ./microservices/reporting-service/
+COPY microservices/reporting-service/src ./microservices/reporting-service/src/
+
+# Install reporting service dependencies (including Canvas)
+WORKDIR /app/microservices/reporting-service
+RUN npm install
+
+# Build the reporting service
+RUN npm run build
+
+# Stage 2: Production stage with Canvas runtime dependencies
+FROM node:18-alpine AS production
+
+# Install runtime dependencies for Canvas
+RUN apk add --no-cache \
+    dumb-init \
+    cairo \
+    pango \
+    jpeg \
+    giflib \
+    librsvg \
+    pixman
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S reporting -u 1001 -G nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Copy shared dependencies
+COPY --from=builder --chown=reporting:nodejs /app/shared ./shared
+
+# Copy reporting service production files
+COPY --from=builder --chown=reporting:nodejs /app/microservices/reporting-service/dist ./dist
+COPY --from=builder --chown=reporting:nodejs /app/microservices/reporting-service/node_modules ./node_modules
+COPY --from=builder --chown=reporting:nodejs /app/microservices/reporting-service/package*.json ./
+
+# Switch to non-root user
+USER reporting
+
+# Expose the port
+EXPOSE 3006
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "const http = require('http'); \
+    const options = { host: 'localhost', port: 3006, path: '/health', timeout: 2000 }; \
+    const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); \
+    req.on('error', () => process.exit(1)); req.end();"
+
+# Start the application
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "start:prod"]

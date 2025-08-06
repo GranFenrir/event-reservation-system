@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
-import { authAPI } from '@/lib/api';
+import { authAPI } from '@/services/api';
 
 interface User {
   id: string;

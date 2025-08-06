@@ -2,18 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import {
   Calendar,
   Home,
   Ticket,
   User,
-  Search,
   LogOut,
   Settings,
+  Menu as MenuIcon,
+  X,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { SearchInput } from './SearchInput';
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -30,18 +33,19 @@ const navigation = [
 export function Navbar() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const visibleNavigation = navigation.filter(
     item => !item.requireAuth || isAuthenticated
   );
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-white/95 backdrop-blur-sm shadow-sm border-b sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-2xl font-bold text-blue-600">
+              <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 EventReserve
               </Link>
             </div>
@@ -68,14 +72,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search events..."
-                className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            </div>
+            <SearchInput />
 
             {isAuthenticated ? (
               <Menu as="div" className="ml-3 relative">
@@ -131,25 +128,106 @@ export function Navbar() {
 
           {/* Mobile menu button */}
           <div className="sm:hidden flex items-center">
-            <button className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500">
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            >
               <span className="sr-only">Open main menu</span>
-              {/* Icon for menu */}
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <MenuIcon className="h-6 w-6" />
+              )}
             </button>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        {isMobileMenuOpen && (
+          <div className="sm:hidden">
+            <div className="pt-2 pb-3 space-y-1">
+              {visibleNavigation.map(item => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      pathname === item.href
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700',
+                      'block pl-3 pr-4 py-2 border-l-4 text-base font-medium flex items-center'
+                    )}
+                  >
+                    <Icon className="h-5 w-5 mr-3" />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </div>
+            
+            {/* Mobile auth section */}
+            <div className="pt-4 pb-3 border-t border-gray-200">
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center px-4">
+                    <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
+                      <span className="text-white font-medium">
+                        {user?.name?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="ml-3">
+                      <div className="text-base font-medium text-gray-800">
+                        {user?.name}
+                      </div>
+                      <div className="text-sm font-medium text-gray-500">
+                        {user?.email}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 flex items-center"
+                    >
+                      <Settings className="h-5 w-5 mr-3" />
+                      Profile Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 flex items-center"
+                    >
+                      <LogOut className="h-5 w-5 mr-3" />
+                      Sign out
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1">
+                  <Link
+                    href="/login"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-base font-medium bg-blue-600 text-white hover:bg-blue-700 mx-4 rounded-md text-center"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );
