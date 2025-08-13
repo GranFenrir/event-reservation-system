@@ -168,7 +168,7 @@ async function setupDemo() {
     console.log('🎉 Demo setup complete!\n');
     console.log('📍 You can now visit:');
     console.log('   Frontend: http://localhost:3000');
-    console.log('   Admin Panel: http://localhost:3001\n');
+    console.log('   Admin Panel: http://localhost:3010\n');
     console.log('📊 Sample data includes:');
     console.log(`   - ${venues.length} venues`);
     console.log(`   - ${sampleData.events.length} events with multiple ticket types`);

@@ -5,6 +5,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15.3%2B-black.svg)](https://nextjs.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-10.0%2B-red.svg)](https://nestjs.com/)
+[![GitHub issues](https://img.shields.io/github/issues/GranFenrir/event-reservation-system.svg)](https://github.com/GranFenrir/event-reservation-system/issues)
+[![GitHub stars](https://img.shields.io/github/stars/GranFenrir/event-reservation-system.svg)](https://github.com/GranFenrir/event-reservation-system/stargazers)
 
 A modern, scalable event reservation system built with **microservices architecture**, featuring real-time seat selection, secure payment processing, and comprehensive event management capabilities.
 
@@ -36,27 +38,27 @@ A modern, scalable event reservation system built with **microservices architect
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │  Admin Panel    │    │   Mock API      │
-│   (Next.js)     │    │  (React Admin)  │    │   (Express)     │
-│   Port: 3000    │    │   Port: 3001    │    │   Port: 3010    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-    ┌────────────────────────────┼────────────────────────────┐
-    │                            │                            │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ Event Service   │    │Reservation Svc  │    │ Payment Service │
-│   Port: 3001    │    │   Port: 3002    │    │   Port: 3003    │
-│   SQLite DB     │    │   SQLite DB     │    │   SQLite DB     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                 │
-                       ┌─────────────────┐
-                       │  Mail Service   │
-                       │   Port: 3004    │
-                       │   SQLite DB     │
-                       └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │  Admin Panel    │
+│   (Next.js)     │    │  (React Admin)  │
+│   Port: 3000    │    │   Port: 3010    │
+└─────────────────┘    └─────────────────┘
+         │                       │
+         └───────────────────────┼───────────────────────┐
+                                 │                       │
+    ┌────────────────────────────┼───────────────────────┼────────────────┐
+    │                            │                       │                │
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│ Event Service   │    │Reservation Svc  │    │ Payment Service │    │   User Service  │
+│   Port: 3001    │    │   Port: 3002    │    │   Port: 3003    │    │   Port: 3006    │
+│   TypeORM/DB    │    │   TypeORM/DB    │    │   TypeORM/DB    │    │   TypeORM/DB    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                 │                                              │
+                   ┌─────────────────┐                           ┌─────────────────┐
+                   │  Mail Service   │                           │Reporting Service│
+                   │   Port: 3004    │                           │   Port: 3005    │
+                   │   TypeORM/DB    │                           │   TypeORM/DB    │
+                   └─────────────────┘                           └─────────────────┘
 ```
 
 ## 🚀 Quick Start
@@ -66,12 +68,15 @@ A modern, scalable event reservation system built with **microservices architect
 - **Node.js** (v18 or higher)
 - **npm** (v8 or higher)
 - **Git**
+- **PostgreSQL** (recommended) or use SQLite for development
+
+> **Note**: The project defaults to PostgreSQL. For quick development, services can fallback to SQLite by setting `DB_TYPE=sqlite` in environment variables.
 
 ### Installation
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/event-reservation-system.git
+git clone https://github.com/GranFenrir/event-reservation-system.git
 cd event-reservation-system
 ```
 
@@ -87,16 +92,21 @@ cd ../mail-service && npm install
 cd ../mock-api && npm install
 ```
 
-3. **Start all services**
+3. **Start all services using scripts**
 ```bash
-# Start all microservices
-npm run start:services
+# Option 1: Start all services at once (recommended)
+./scripts/start-all.sh
 
-# Start frontend (in new terminal)
-cd frontend && npm run dev
+# Option 2: Start services individually
+npm run dev:services
 
-# Start admin panel (in new terminal)
-cd admin-panel && npm run dev
+# Option 3: Start frontend only for development
+./scripts/start-frontend-only.sh
+```
+
+4. **Setup demo data (optional)**
+```bash
+npm run demo:setup
 ```
 
 ### 🌐 Service URLs
@@ -104,12 +114,13 @@ cd admin-panel && npm run dev
 | Service | URL | Description |
 |---------|-----|-------------|
 | Frontend | http://localhost:3000 | User-facing application |
-| Admin Panel | http://localhost:3001 | Admin management interface |
+| Admin Panel | http://localhost:3010 | Admin management interface |
 | Event Service | http://localhost:3001/api/v1 | Event management API |
 | Reservation Service | http://localhost:3002/api/v1 | Booking and seat management |
 | Payment Service | http://localhost:3003/api/v1 | Payment processing |
 | Mail Service | http://localhost:3004/api/v1 | Email notifications |
-| Mock API | http://localhost:3010/api | Development mock server |
+| Reporting Service | http://localhost:3005/api/v1 | Analytics and reports |
+| User Service | http://localhost:3006/api/v1 | User management |
 
 ## 📁 Project Structure
 
@@ -144,19 +155,26 @@ event-reservation-system/
 │   │
 │   ├── 📁 reservation-service/  # Booking and seat management
 │   ├── 📁 payment-service/      # Payment processing
-│   └── 📁 mail-service/         # Email notifications
+│   ├── 📁 mail-service/         # Email notifications
+│   ├── 📁 user-service/         # User management and authentication
+│   └── 📁 reporting-service/    # Analytics and reporting
 │
 ├── 📁 shared/                    # Shared types and utilities
 │   ├── src/
 │   │   ├── types/               # Common TypeScript types
-│   │   ├── enums/               # Shared enumerations
-│   │   └── interfaces/          # Common interfaces
+│   │   └── utils/               # Shared utility functions
 │   └── package.json
 │
-├── 📁 mock-api/                  # Development mock server
-├── 📄 MICROSERVICES_SETUP.md    # Detailed setup guide
-├── 📄 CONTRIBUTING.md            # Contribution guidelines
-└── 📄 package.json               # Root package configuration
+├── 📁 scripts/                  # Automation and setup scripts
+│   ├── start-all.sh            # Start all services
+│   ├── setup-demo.js           # Create demo data
+│   ├── test-integration.sh     # Integration testing
+│   └── validate-architecture.sh # Architecture validation
+│
+├── � README.md                 # This file
+├── 📄 SETUP.md                  # Detailed setup guide
+├── 📄 CONTRIBUTING.md           # Contribution guidelines
+└── 📄 package.json              # Root package configuration
 ```
 
 ## 🛠️ Development
@@ -177,7 +195,18 @@ NEXT_PUBLIC_MAIL_SERVICE_URL=http://localhost:3004
 **Microservices (.env)**
 ```env
 PORT=3001
-DATABASE_URL=./event-service.sqlite
+# Database Configuration (PostgreSQL is recommended)
+DB_TYPE=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_NAME=event_service
+
+# Alternative: SQLite for development
+# DB_TYPE=sqlite
+# DB_DATABASE=./event-service.sqlite
+
 NODE_ENV=development
 CORS_ORIGIN=http://localhost:3000
 ```
@@ -197,9 +226,10 @@ npm run start:dev
 cd admin-panel
 npm run dev
 
-# Mock API (for development)
-cd mock-api
-npm start
+# Using convenience scripts
+./scripts/start-frontend-only.sh    # Frontend + Admin only
+./scripts/test-services.sh          # Test all services
+./scripts/validate-architecture.sh  # Validate setup
 ```
 
 ### Building for Production
@@ -216,16 +246,41 @@ npm run build
 ### Testing
 
 ```bash
-# Run all tests
+# Run integration tests
+./scripts/test-integration.sh
+
+# Test individual service
+./scripts/test-services.sh
+
+# Run frontend tests
+cd frontend
 npm test
 
-# Run tests for specific service
+# Run tests for specific microservice
 cd microservices/event-service
 npm test
-
-# Run E2E tests
-npm run test:e2e
 ```
+
+## 🛠️ Automation Scripts
+
+The project includes several automation scripts for easier development and deployment:
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `start-all.sh` | Start all services with dependency checking | `./scripts/start-all.sh` |
+| `start-frontend-only.sh` | Start only frontend and admin panel | `./scripts/start-frontend-only.sh` |
+| `setup-demo.js` | Create sample data for demonstration | `npm run demo:setup` |
+| `test-integration.sh` | Test all microservice endpoints | `./scripts/test-integration.sh` |
+| `test-services.sh` | Test individual services | `./scripts/test-services.sh` |
+| `validate-architecture.sh` | Validate complete system setup | `./scripts/validate-architecture.sh` |
+| `cleanup-project.sh` | Clean build artifacts and dependencies | `./scripts/cleanup-project.sh` |
+
+### Script Features:
+- ✅ **Prerequisite checking** (Node.js, npm versions)
+- ✅ **Automatic dependency installation**
+- ✅ **Health monitoring** for all services
+- ✅ **Colored output** for better readability
+- ✅ **Error handling** and graceful failures
 
 ## 📚 API Documentation
 
@@ -288,70 +343,43 @@ const response = await fetch('http://localhost:3001/api/v1/events', {
 ### Backend
 - **NestJS 10** - Progressive Node.js framework
 - **TypeScript** - Type-safe JavaScript
-- **SQLite** - Lightweight SQL database
 - **TypeORM** - Object-relational mapping
+- **PostgreSQL** - Primary database (production recommended)
+- **SQLite** - Development/testing database option
 - **Class Validator** - Validation decorators
+- **JWT** - Authentication and authorization
 
 ### Admin Panel
 - **React Admin** - Admin interface framework
 - **Material-UI** - React component library
 
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Make your changes**
-4. **Add tests** for new functionality
-5. **Commit your changes**
-   ```bash
-   git commit -m 'Add some amazing feature'
-   ```
-6. **Push to the branch**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-7. **Open a Pull Request**
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🆘 Support
 
 If you encounter any issues or have questions:
 
-1. Check the [Issues](https://github.com/yourusername/event-reservation-system/issues) page
-2. Read the [MICROSERVICES_SETUP.md](MICROSERVICES_SETUP.md) for detailed setup instructions
-3. Create a new issue with detailed information about your problem
+1. Check the [Issues](https://github.com/GranFenrir/event-reservation-system/issues) page
+2. Read the [SETUP.md](SETUP.md) for detailed setup instructions
+3. Use the validation script: `./scripts/validate-architecture.sh`
+4. Create a new issue with detailed information about your problem
 
 ## 🎯 Roadmap
 
+- [x] Microservices architecture with 6 independent services
+- [x] TypeScript implementation across all services
+- [x] React Admin panel for management
+- [x] Automated setup and testing scripts
 - [ ] Docker containerization for easy deployment
-- [ ] Event-driven architecture with Kafka integration
+- [ ] Event-driven architecture with message queues
 - [ ] Real-time notifications with WebSockets
-- [ ] Advanced analytics and reporting
+- [ ] Advanced analytics and reporting dashboard
 - [ ] Mobile app development
 - [ ] Payment gateway integrations (Stripe, PayPal)
 - [ ] Multi-language support (i18n)
-- [ ] Performance optimization and caching
+- [ ] Performance optimization and Redis caching
 
 ## 👥 Authors
 
-- **Your Name** - *Initial work* - [YourGitHub](https://github.com/yourusername)
+- **GranFenrir** - *Initial work* - [GitHub Profile](https://github.com/GranFenrir)
 
-## 🙏 Acknowledgments
-
-- Thanks to the NestJS and Next.js communities for excellent frameworks
-- Inspired by modern event management systems
-- Built with love for the developer community
-
----
 
 **⭐ Star this repository if you find it helpful!**

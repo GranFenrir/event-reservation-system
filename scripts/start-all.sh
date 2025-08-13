@@ -37,29 +37,43 @@ echo "🔧 Starting microservices..."
 # Event Service
 echo "🎪 Starting Event Service on port 3001..."
 cd microservices/event-service
-npm start &
+npm run start:dev &
 EVENT_PID=$!
 cd ../..
 
 # Reservation Service  
 echo "🎫 Starting Reservation Service on port 3002..."
 cd microservices/reservation-service
-npm start &
+npm run start:dev &
 RESERVATION_PID=$!
 cd ../..
 
 # Payment Service
 echo "💳 Starting Payment Service on port 3003..."
 cd microservices/payment-service
-npm start &
+npm run start:dev &
 PAYMENT_PID=$!
 cd ../..
 
 # Mail Service
 echo "📧 Starting Mail Service on port 3004..."
 cd microservices/mail-service
-npm start &
+npm run start:dev &
 MAIL_PID=$!
+cd ../..
+
+# Reporting Service
+echo "📊 Starting Reporting Service on port 3005..."
+cd microservices/reporting-service
+npm run start:dev &
+REPORTING_PID=$!
+cd ../..
+
+# User Service
+echo "👤 Starting User Service on port 3006..."
+cd microservices/user-service
+npm run start:dev &
+USER_PID=$!
 cd ../..
 
 # Wait a moment for services to start
@@ -73,7 +87,7 @@ FRONTEND_PID=$!
 cd ..
 
 # Start admin panel
-echo "👨‍💼 Starting Admin Panel on port 3001 (Next.js)..."
+echo "👨‍💼 Starting Admin Panel on port 3010..."
 cd admin-panel  
 npm run dev &
 ADMIN_PID=$!
@@ -84,11 +98,13 @@ echo "🎉 All services started successfully!"
 echo ""
 echo "📍 Service URLs:"
 echo "   Frontend:         http://localhost:3000"
-echo "   Admin Panel:      http://localhost:3001"  
+echo "   Admin Panel:      http://localhost:3010"  
 echo "   Event Service:    http://localhost:3001/api/v1"
 echo "   Reservation Svc:  http://localhost:3002/api/v1"
 echo "   Payment Service:  http://localhost:3003/api/v1"
 echo "   Mail Service:     http://localhost:3004/api/v1"
+echo "   Reporting Svc:    http://localhost:3005/api/v1"
+echo "   User Service:     http://localhost:3006/api/v1"
 echo ""
 echo "🛑 To stop all services, press Ctrl+C or run: ./scripts/stop-services.sh"
 echo ""
@@ -97,7 +113,7 @@ echo ""
 cleanup() {
     echo ""
     echo "🛑 Stopping all services..."
-    kill $EVENT_PID $RESERVATION_PID $PAYMENT_PID $MAIL_PID $FRONTEND_PID $ADMIN_PID 2>/dev/null
+    kill $EVENT_PID $RESERVATION_PID $PAYMENT_PID $MAIL_PID $REPORTING_PID $USER_PID $FRONTEND_PID $ADMIN_PID 2>/dev/null
     echo "✅ All services stopped"
     exit 0
 }

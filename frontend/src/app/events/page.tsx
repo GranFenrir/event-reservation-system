@@ -118,7 +118,7 @@ function EventCard({ event }: { event: Event }) {
   const eventEndDate = new Date(event.endDate);
   
   // Get the minimum price from ticket prices
-  const minPrice = event.ticketPrices.length > 0 
+  const minPrice = event.ticketPrices && event.ticketPrices.length > 0 
     ? Math.min(...event.ticketPrices.map(price => parseFloat(price.price)))
     : 0;
 
